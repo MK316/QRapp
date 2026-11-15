@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QR 코드 만들기</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+<style>
+  :root {
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --text: #1d1f23;
+    --muted: #6b7280;
+    --line: #e3e5e9;
+    --accent: #2f5bea;
+    --accent-dark: #2448c0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    text-align: center;
+    padding: 40px 20px 8px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.5px; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  main {
+    max-width: 960px;
+    margin: 28px auto 60px;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 24px;
+  }
+  label {
+    display: block;
+    font-weight: 600;
+    font-size: 14px;
+    margin: 0 0 8px;
+  }
+  .field { margin-bottom: 20px; }
+  textarea, input[type="text"], select {
+    width: 100%;
+    font: inherit;
+    font-size: 15px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fafbfc;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  textarea:focus, input[type="text"]:focus, select:focus {
+    border-color: var(--accent);
+    background: #fff;
+  }
+  textarea { resize: vertical; min-height: 90px; }
+  #titleInput { font-size: 18px; font-weight: 600; }
+
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .color-wrap {
+    display: flex; align-items: center; gap: 10px;
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 6px 10px; background: #fafbfc;
+  }
+  input[type="color"] {
+    width: 34px; height: 34px; border: none; padding: 0; background: none; cursor: pointer;
+  }
+  .color-wrap span { font-size: 14px; color: var(--muted); font-family: ui-monospace, monospace; }
+
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 6px; }
+
+  .preview {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .canvas-box {
+    width: 100%;
+    background: repeating-conic-gradient(#eef0f3 0% 25%, #fff 0% 50%) 50% / 20px 20px;
+    border-radius: 12px;
+    padding: 16px;
+    display: flex; justify-content: center;
+  }
+  canvas {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 2px 12px rgba(0,0,0,.08);
+    border-radius: 4px;
+  }
+  .empty {
+    color: var(--muted); padding: 80px 0; text-align: center; font-size: 15px;
+  }
+  .buttons { display: flex; gap: 10px; width: 100%; margin-top: 18px; }
+  button {
+    flex: 1;
+    font: inherit; font-size: 16px; font-weight: 600;
+    padding: 14px; border-radius: 10px; cursor: pointer;
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+    transition: background .15s, transform .05s;
+  }
+  button:active { transform: translateY(1px); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: var(--accent-dark); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .error { color: #c62828; font-size: 14px; margin-top: 10px; text-align: center; }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding-bottom: 30px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>QR 코드 만들기</h1>
+  <p>링크나 텍스트를 입력하면 바로 QR 코드가 만들어집니다.</p>
+</header>
+
+<main>
+  <section class="card">
+    <div class="field">
+      <label for="dataInput">QR에 담을 내용 (URL 또는 텍스트)</label>
+      <textarea id="dataInput" placeholder="https://example.com"></textarea>
+    </div>
+
+    <div class="field">
+      <label for="titleInput">제목 (QR 아래에 큰 글씨로 표시)</label>
+      <input type="text" id="titleInput" placeholder="예: 우리 가게 메뉴판">
+      <div class="hint">비워두면 QR 코드만 저장됩니다. 길면 자동으로 줄바꿈됩니다.</div>
+    </div>
+
+    <div class="row field">
+      <div>
+        <label>QR 색상</label>
+        <div class="color-wrap">
+          <input type="color" id="fgColor" value="#000000">
+          <span id="fgLabel">#000000</span>
+        </div>
+      </div>
+      <div>
+        <label>배경 색상</label>
+        <div class="color-wrap">
+          <input type="color" id="bgColor" value="#ffffff">
+          <span id="bgLabel">#ffffff</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="row field">
+      <div>
+        <label for="titleColor">제목 색상</label>
+        <div class="color-wrap">
+          <input type="color" id="titleColor" value="#000000">
+          <span id="titleColorLabel">#000000</span>
+        </div>
+      </div>
+      <div>
+        <label for="ecLevel">오류 복원 수준</label>
+        <select id="ecLevel">
+          <option value="L">낮음 (L, 7%)</option>
+          <option value="M" selected>보통 (M, 15%)</option>
+          <option value="Q">높음 (Q, 25%)</option>
+          <option value="H">최고 (H, 30%)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="sizeInput">이미지 크기: <span id="sizeLabel">1000</span>px</label>
+      <input type="range" id="sizeInput" min="300" max="2000" step="50" value="1000">
+    </div>
+
+    <div class="field" style="margin-bottom:0">
+      <label for="titleSize">제목 글자 크기: <span id="titleSizeLabel">10</span>%</label>
+      <input type="range" id="titleSize" min="5" max="18" step="1" value="10">
+      <div class="hint">이미지 너비 대비 비율입니다.</div>
+    </div>
+  </section>
+
+  <section class="card preview">
+    <div class="canvas-box">
+      <canvas id="qrCanvas" style="display:none"></canvas>
+      <div class="empty" id="emptyMsg">내용을 입력하면 여기에 QR 코드가 나타납니다.</div>
+    </div>
+    <div class="error" id="errorMsg"></div>
+    <div class="buttons">
+      <button class="primary" id="downloadPng" disabled>PNG 다운로드</button>
+      <button id="downloadJpg" disabled>JPG 다운로드</button>
+    </div>
+  </section>
+</main>
+
+<footer>모든 처리는 브라우저 안에서 이루어지며, 입력한 내용은 어디에도 전송되지 않습니다.</footer>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const dataInput = $('dataInput');
+  const titleInput = $('titleInput');
+  const fgColor = $('fgColor');
+  const bgColor = $('bgColor');
+  const titleColor = $('titleColor');
+  const ecLevel = $('ecLevel');
+  const sizeInput = $('sizeInput');
+  const titleSize = $('titleSize');
+  const canvas = $('qrCanvas');
+  const ctx = canvas.getContext('2d');
+  const emptyMsg = $('emptyMsg');
+  const errorMsg = $('errorMsg');
+  const btnPng = $('downloadPng');
+  const btnJpg = $('downloadJpg');
+
+  const FONT = '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif';
+
+  // 한글 등 UTF-8 문자 지원
+  if (window.qrcode && qrcode.stringToBytesFuncs && qrcode.stringToBytesFuncs['UTF-8']) {
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+  }
+
+  function setEnabled(on) {
+    btnPng.disabled = !on;
+    btnJpg.disabled = !on;
+    canvas.style.display = on ? 'block' : 'none';
+    emptyMsg.style.display = on ? 'none' : 'block';
+  }
+
+  // 글자 단위로 줄바꿈 (한글/영문 모두 대응, 영문은 단어 단위 우선)
+  function wrapText(text, maxWidth) {
+    const lines = [];
+    text.split('\n').forEach((para) => {
+      const tokens = para.match(/\S+\s*|\s+/g) || [''];
+      let line = '';
+      tokens.forEach((tok) => {
+        if (ctx.measureText(line + tok).width <= maxWidth) {
+          line += tok;
+          return;
+        }
+        if (line.trim()) { lines.push(line.trimEnd()); line = ''; }
+        // 한 토큰이 너무 길면 글자 단위로 자름
+        for (const ch of tok) {
+          if (ctx.measureText(line + ch).width > maxWidth && line) {
+            lines.push(line.trimEnd());
+            line = ch.trim() ? ch : '';
+          } else {
+            line += ch;
+          }
+        }
+      });
+      lines.push(line.trimEnd());
+    });
+    return lines;
+  }
+
+  function render() {
+    const data = dataInput.value;
+    const title = titleInput.value.trim();
+    errorMsg.textContent = '';
+
+    if (!data.trim()) { setEnabled(false); return; }
+    if (!window.qrcode) {
+      errorMsg.textContent = 'QR 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.';
+      setEnabled(false);
+      return;
+    }
+
+    let qr;
+    try {
+      qr = qrcode(0, ecLevel.value);
+      qr.addData(data);
+      qr.make();
+    } catch (e) {
+      errorMsg.textContent = '내용이 너무 깁니다. 줄이거나 오류 복원 수준을 낮춰 주세요.';
+      setEnabled(false);
+      return;
+    }
+
+    const W = parseInt(sizeInput.value, 10);
+    const count = qr.getModuleCount();
+    const quiet = 4; // QR 표준 여백(모듈 4칸)
+    const cell = W / (count + quiet * 2);
+    const qrStart = quiet * cell;
+
+    // 제목 영역 계산
+    const fontPx = Math.round(W * parseInt(titleSize.value, 10) / 100);
+    const lineH = Math.round(fontPx * 1.25);
+    const sidePad = Math.round(W * 0.06);
+    let lines = [];
+    if (title) {
+      ctx.font = `800 ${fontPx}px ${FONT}`;
+      lines = wrapText(title, W - sidePad * 2);
+    }
+    const titleBlock = lines.length ? lines.length * lineH + Math.round(quiet * cell) : 0;
+    const H = Math.round(W + titleBlock);
+
+    canvas.width = W;
+    canvas.height = H;
+
+    // 배경
+    ctx.fillStyle = bgColor.value;
+    ctx.fillRect(0, 0, W, H);
+
+    // QR 모듈 (가장자리 틈 없이 정수 좌표로)
+    ctx.fillStyle = fgColor.value;
+    for (let r = 0; r < count; r++) {
+      for (let c = 0; c < count; c++) {
+        if (qr.isDark(r, c)) {
+          const x0 = Math.round(qrStart + c * cell);
+          const y0 = Math.round(qrStart + r * cell);
+          const x1 = Math.round(qrStart + (c + 1) * cell);
+          const y1 = Math.round(qrStart + (r + 1) * cell);
+          ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+        }
+      }
+    }
+
+    // 제목
+    if (lines.length) {
+      ctx.font = `800 ${fontPx}px ${FONT}`;
+      ctx.fillStyle = titleColor.value;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // QR 아래 여백을 조금 줄여 제목이 QR에 가깝게 붙도록
+      const startY = W - quiet * cell * 0.4;
+      lines.forEach((ln, i) => {
+        ctx.fillText(ln, W / 2, startY + lineH * i + lineH / 2);
+      });
+    }
+
+    setEnabled(true);
+  }
+
+  function fileName(ext) {
+    const base = (titleInput.value.trim() || 'qrcode')
+      .replace(/[\\/:*?"<>|\n\r]+/g, '_')
+      .slice(0, 50);
+    return `${base}.${ext}`;
+  }
+
+  function download(type, ext) {
+    canvas.toBlob((blob) => {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName(ext);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    }, type, 0.95);
+  }
+
+  btnPng.addEventListener('click', () => download('image/png', 'png'));
+  btnJpg.addEventListener('click', () => download('image/jpeg', 'jpg'));
+
+  function syncLabels() {
+    $('fgLabel').textContent = fgColor.value;
+    $('bgLabel').textContent = bgColor.value;
+    $('titleColorLabel').textContent = titleColor.value;
+    $('sizeLabel').textContent = sizeInput.value;
+    $('titleSizeLabel').textContent = titleSize.value;
+  }
+
+  [dataInput, titleInput, fgColor, bgColor, titleColor, ecLevel, sizeInput, titleSize].forEach((el) => {
+    el.addEventListener('input', () => { syncLabels(); render(); });
+  });
+
+  // 웹폰트가 늦게 로드되는 경우 다시 그리기
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(render);
+
+  syncLabels();
+  render();
+})();
+</script>
+</body>
+</html>
